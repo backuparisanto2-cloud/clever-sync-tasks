@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ExportRouteImport } from './routes/export'
 import { Route as LogsRouteImport } from './routes/logs'
 import { Route as SmtpRouteImport } from './routes/smtp'
 import { Route as RemindersIdRouteImport } from './routes/reminders/$id'
@@ -28,6 +29,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExportRoute = ExportRouteImport.update({
+  id: '/export',
+  path: '/export',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LogsRoute = LogsRouteImport.update({
@@ -74,6 +80,7 @@ const ApiPublicMailTestSendRoute = ApiPublicMailTestSendRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/export': typeof ExportRoute
   '/logs': typeof LogsRoute
   '/smtp': typeof SmtpRoute
   '/reminders/$id': typeof RemindersIdRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/export': typeof ExportRoute
   '/logs': typeof LogsRoute
   '/smtp': typeof SmtpRoute
   '/reminders/$id': typeof RemindersIdRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/export': typeof ExportRoute
   '/logs': typeof LogsRoute
   '/smtp': typeof SmtpRoute
   '/reminders/$id': typeof RemindersIdRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/export'
     | '/logs'
     | '/smtp'
     | '/reminders/$id'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/export'
     | '/logs'
     | '/smtp'
     | '/reminders/$id'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/auth'
+    | '/export'
     | '/logs'
     | '/smtp'
     | '/reminders/$id'
@@ -150,6 +162,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  ExportRoute: typeof ExportRoute
   LogsRoute: typeof LogsRoute
   SmtpRoute: typeof SmtpRoute
   RemindersIdRoute: typeof RemindersIdRoute
@@ -174,6 +187,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/export': {
+      id: '/export'
+      path: '/export'
+      fullPath: '/export'
+      preLoaderRoute: typeof ExportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/logs': {
@@ -238,6 +258,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  ExportRoute: ExportRoute,
   LogsRoute: LogsRoute,
   SmtpRoute: SmtpRoute,
   RemindersIdRoute: RemindersIdRoute,
