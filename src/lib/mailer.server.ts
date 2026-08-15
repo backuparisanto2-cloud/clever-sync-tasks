@@ -99,6 +99,35 @@ export async function runSmtpTest(profileId: string) {
   return status;
 }
 
+/** Sends a real test email through the profile so credentials + delivery are verified. */
+export async function sendSmtpTestEmail(profileId: string, to: string) {
+  const cfg = await loadSmtp(profileId);
+  let status = "Succeeded";
+  let error: string | null = null;
+  try {
+    const raw = buildMime({
+      from: cfg.from_email,
+      fromName: cfg.from_name,
+      to: [to],
+      subject: `Uji koneksi SMTP — ${cfg.name}`,
+      body:
+        `Email ini dikirim untuk menguji profil SMTP "${cfg.name}" (${cfg.host}:${cfg.port}).\n` +
+        `Jika Anda menerimanya, kredensial dan pengiriman email sudah berfungsi.\n\n` +
+        `Waktu uji: ${new Date().toISOString()}`,
+      attachments: [],
+    });
+    await sendMail(cfg, { from: cfg.from_email, fromName: cfg.from_name, to: [to], raw });
+  } catch (e) {
+    error = (e as Error).message;
+    status = `Failed: ${error}`;
+  }
+  await supabaseAdmin
+    .from("smtp_profiles")
+    .update({ last_status: status, last_tested_at: new Date().toISOString() })
+    .eq("id", profileId);
+  return { status, error };
+}
+
 async function loadAttachments(reminderId: string) {
   const { data } = await supabaseAdmin
     .from("reminder_attachments")

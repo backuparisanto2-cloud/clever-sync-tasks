@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@/lib/app.functions";
-import { CheckCircle2, Loader2, Plus, Server, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Plus, Send, Server, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   fetchSmtpProfiles,
   removeSmtpProfile,
+  sendSmtpTestEmail,
   testSmtpProfile,
   upsertSmtpProfile,
 } from "@/lib/app.functions";
@@ -70,9 +71,12 @@ function SmtpPage() {
   const save = useServerFn(upsertSmtpProfile);
   const destroy = useServerFn(removeSmtpProfile);
   const test = useServerFn(testSmtpProfile);
+  const sendTest = useServerFn(sendSmtpTestEmail);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [busy, setBusy] = useState(false);
   const [testing, setTesting] = useState<string | null>(null);
+  const [sending, setSending] = useState<string | null>(null);
+  const [testEmail, setTestEmail] = useState<Record<string, string>>({});
 
   const profiles = useQuery({ queryKey: ["smtp"], queryFn: () => list() });
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }));
@@ -225,7 +229,7 @@ function SmtpPage() {
                     {p.host}:{p.port} · {p.tls ? "TLS" : "tanpa TLS"} · {p.from_email}
                   </p>
                   <p className="mt-1 flex items-center gap-1 text-xs">
-                    {p.last_status === "success" ? (
+                    {p.last_status?.startsWith("Succeeded") ? (
                       <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                     ) : p.last_status ? (
                       <XCircle className="h-3.5 w-3.5 text-destructive" />
@@ -245,7 +249,8 @@ function SmtpPage() {
                       setTesting(p.id);
                       try {
                         const res = await test({ data: { id: p.id } });
-                        if (res.status === "success") toast.success("Koneksi SMTP berhasil");
+                        if (res.status.startsWith("Succeeded"))
+                          toast.success("Koneksi & kredensial SMTP valid");
                         else toast.error(`Uji gagal: ${res.status}`);
                       } catch (e) {
                         toast.error((e as Error).message);
@@ -255,7 +260,7 @@ function SmtpPage() {
                       }
                     }}
                   >
-                    {testing === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Uji
+                    {testing === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Uji koneksi
                   </Button>
                   <Button
                     size="sm"
@@ -289,6 +294,46 @@ function SmtpPage() {
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="col-span-2 flex flex-wrap items-center gap-2 border-t border-border/60 pt-4">
+                  <Input
+                    type="email"
+                    className="h-9 w-full sm:w-64"
+                    placeholder="email tujuan uji"
+                    value={testEmail[p.id] ?? ""}
+                    onChange={(e) => setTestEmail((m) => ({ ...m, [p.id]: e.target.value }))}
+                  />
+                  <Button
+                    size="sm"
+                    className="rounded-full"
+                    disabled={sending === p.id}
+                    onClick={async () => {
+                      const to = (testEmail[p.id] ?? "").trim();
+                      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+                        toast.error("Masukkan alamat email tujuan yang valid");
+                        return;
+                      }
+                      setSending(p.id);
+                      try {
+                        const res = await sendTest({ data: { id: p.id, to } });
+                        if (res.error) toast.error(`Gagal kirim: ${res.error}`);
+                        else toast.success(`Email uji terkirim ke ${to}`);
+                      } catch (e) {
+                        toast.error((e as Error).message);
+                      } finally {
+                        setSending(null);
+                        qc.invalidateQueries({ queryKey: ["smtp"] });
+                      }
+                    }}
+                  >
+                    {sending === p.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                    Kirim email uji
                   </Button>
                 </div>
               </CardContent>
