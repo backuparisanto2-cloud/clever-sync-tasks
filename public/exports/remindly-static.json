@@ -1,9 +1,9 @@
 {
   "file": "remindly-static.zip",
-  "bytes": 0,
-  "builtAt": "2026-08-15T12:50:20.957Z",
+  "bytes": 261803,
+  "builtAt": "2026-08-15T12:50:48.497Z",
   "fileCount": 12,
-  "valid": false,
+  "valid": true,
   "checks": [
     {
       "id": "entry",
@@ -38,7 +38,7 @@
     {
       "id": "no-secret",
       "label": "Tidak ada kredensial rahasia di bundel",
-      "ok": false,
+      "ok": true,
       "detail": "Service role key dan password SMTP hanya ada di backend."
     },
     {
@@ -62,8 +62,8 @@
     {
       "id": "archive",
       "label": "Arsip ZIP terbentuk dan tidak kosong",
-      "ok": false,
-      "detail": "ZIP tidak dibuat karena validasi gagal."
+      "ok": true,
+      "detail": "0.25 MB"
     }
   ]
 }
