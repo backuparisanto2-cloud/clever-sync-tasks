@@ -231,6 +231,72 @@ function EnvGuidePage() {
         </CardContent>
       </Card>
 
+      <Card className="mt-4 border-border/70 shadow-[var(--shadow-soft)]">
+        <CardContent className="space-y-4 p-5">
+          <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+            <Server className="h-4 w-4 text-primary" /> Koneksi SMTP
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="smtp-mode">Port &amp; enkripsi</Label>
+              <Select value={smtpMode} onValueChange={(v) => setSmtpMode(v as SmtpMode)}>
+                <SelectTrigger id="smtp-mode">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(SMTP_MODES) as SmtpMode[]).map((key) => (
+                    <SelectItem key={key} value={key}>
+                      {SMTP_MODES[key].label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="smtp-host">Host SMTP (opsional)</Label>
+              <Input
+                id="smtp-host"
+                placeholder="smtp.gmail.com"
+                value={smtpHost}
+                onChange={(e) => setSmtpHost(e.target.value)}
+              />
+            </div>
+            {smtpMode === "custom" && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="smtp-port">Port khusus</Label>
+                  <Input
+                    id="smtp-port"
+                    type="number"
+                    value={customPort}
+                    onChange={(e) => setCustomPort(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-border/70 p-3">
+                  <Label htmlFor="smtp-tls" className="text-sm">
+                    Pakai TLS langsung
+                  </Label>
+                  <Switch id="smtp-tls" checked={customTls} onCheckedChange={setCustomTls} />
+                </div>
+              </>
+            )}
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="smtp-from">Alamat pengirim (opsional)</Label>
+              <Input
+                id="smtp-from"
+                placeholder="pengingat@domainanda.com"
+                value={smtpFrom}
+                onChange={(e) => setSmtpFrom(e.target.value)}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Port 465 memakai TLS langsung, port 587 memakai STARTTLS, port 25 tanpa enkripsi. Nilai
+            ini harus sama dengan profil di halaman SMTP agar pengiriman berhasil.
+          </p>
+        </CardContent>
+      </Card>
+
       <VarSection
         icon={KeyRound}
         title="1. Variabel build (masuk ke bundel statis)"
