@@ -225,7 +225,7 @@ function SmtpPage() {
                     {p.host}:{p.port} · {p.tls ? "TLS" : "tanpa TLS"} · {p.from_email}
                   </p>
                   <p className="mt-1 flex items-center gap-1 text-xs">
-                    {p.last_status === "success" ? (
+                    {p.last_status?.startsWith("Succeeded") ? (
                       <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                     ) : p.last_status ? (
                       <XCircle className="h-3.5 w-3.5 text-destructive" />
@@ -245,7 +245,8 @@ function SmtpPage() {
                       setTesting(p.id);
                       try {
                         const res = await test({ data: { id: p.id } });
-                        if (res.status === "success") toast.success("Koneksi SMTP berhasil");
+                        if (res.status.startsWith("Succeeded"))
+                          toast.success("Koneksi & kredensial SMTP valid");
                         else toast.error(`Uji gagal: ${res.status}`);
                       } catch (e) {
                         toast.error((e as Error).message);
@@ -255,7 +256,7 @@ function SmtpPage() {
                       }
                     }}
                   >
-                    {testing === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Uji
+                    {testing === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Uji koneksi
                   </Button>
                   <Button
                     size="sm"
