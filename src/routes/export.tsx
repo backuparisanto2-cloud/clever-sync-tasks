@@ -1,6 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Download, FileArchive, Globe, ServerCog, ShieldCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Download,
+  FileArchive,
+  Globe,
+  KeyRound,
+  Loader2,
+  ServerCog,
+  ShieldCheck,
+  XCircle,
+} from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,9 +36,18 @@ export const Route = createFileRoute("/export")({
   component: ExportPage,
 });
 
-type ExportMeta = { file: string; bytes: number; builtAt: string };
+type ExportCheck = { id: string; label: string; ok: boolean; detail: string };
+type ExportMeta = {
+  file: string;
+  bytes: number;
+  builtAt: string;
+  fileCount?: number;
+  valid?: boolean;
+  checks?: ExportCheck[];
+};
 
 const ZIP_URL = "/exports/remindly-static.zip";
+
 
 function Section({
   icon: Icon,
@@ -69,6 +89,10 @@ function ExportPage() {
   });
 
   const sizeMb = meta.data ? (meta.data.bytes / 1024 / 1024).toFixed(2) : null;
+  const checks = meta.data?.checks ?? [];
+  const failed = checks.filter((c) => !c.ok);
+  const validated = Boolean(meta.data) && checks.length > 0;
+  const ready = validated ? failed.length === 0 : Boolean(meta.data);
 
   return (
     <AppShell>
@@ -92,16 +116,85 @@ function ExportPage() {
                 {meta.isLoading
                   ? "Memeriksa paket…"
                   : meta.data
-                    ? `${sizeMb} MB · dibuat ${formatDateTime(meta.data.builtAt)}`
+                    ? `${sizeMb} MB · ${meta.data.fileCount ?? "?"} berkas · dibuat ${formatDateTime(meta.data.builtAt)}`
                     : "Paket belum tersedia — jalankan perintah export di bawah."}
               </p>
             </div>
           </div>
-          <Button asChild className="rounded-full" disabled={!meta.data}>
-            <a href={ZIP_URL} download>
-              <Download className="h-4 w-4" /> Unduh ZIP statis
-            </a>
-          </Button>
+          {ready ? (
+            <Button asChild className="rounded-full">
+              <a href={ZIP_URL} download>
+                <Download className="h-4 w-4" /> Unduh ZIP statis
+              </a>
+            </Button>
+          ) : (
+            <Button className="rounded-full" disabled>
+              {meta.isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <AlertTriangle className="h-4 w-4" />
+              )}
+              {meta.isLoading ? "Memvalidasi…" : "Belum lolos validasi"}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-4 border-border/70 shadow-[var(--shadow-soft)]">
+        <CardContent className="p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+              <ShieldCheck className="h-4 w-4 text-primary" /> Validasi bundel
+            </h2>
+            <span
+              className={
+                "rounded-full px-3 py-1 text-xs font-medium " +
+                (ready
+                  ? "bg-primary/10 text-primary"
+                  : "bg-destructive/10 text-destructive")
+              }
+            >
+              {meta.isLoading
+                ? "Memeriksa…"
+                : !validated
+                  ? "Belum ada hasil validasi"
+                  : ready
+                    ? `Lolos ${checks.length}/${checks.length} pemeriksaan`
+                    : `${failed.length} pemeriksaan gagal`}
+            </span>
+          </div>
+
+          {validated ? (
+            <ul className="mt-4 space-y-2">
+              {checks.map((c) => (
+                <li key={c.id} className="flex items-start gap-2 text-sm">
+                  {c.ok ? (
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  ) : (
+                    <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                  )}
+                  <span className="min-w-0">
+                    <span className={c.ok ? "" : "text-destructive"}>{c.label}</span>
+                    <span className="block text-xs text-muted-foreground">{c.detail}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Jalankan <code className="rounded bg-muted px-1 py-0.5">npm run export:static</code>{" "}
+              untuk membangun ulang paket sekaligus menjalankan pemeriksaan otomatis (entry point,
+              aset, kredensial ter-inject, tidak ada rahasia yang bocor, konfigurasi hosting).
+            </p>
+          )}
+
+          {validated && !ready && (
+            <p className="mt-3 text-sm text-destructive">
+              Unduhan dinonaktifkan karena bundel belum valid. Perbaiki poin di atas lalu jalankan
+              ulang <code className="rounded bg-muted px-1 py-0.5">npm run export:static</code> —
+              ZIP hanya dibuat ketika semua pemeriksaan lolos.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -110,6 +203,20 @@ function ExportPage() {
         dibuka semua sistem. Untuk membuat ulang paket setelah ada perubahan tampilan, jalankan{" "}
         <code className="rounded bg-muted px-1 py-0.5">npm run export:static</code>.
       </p>
+
+      <Card className="mt-4 border-border/70 shadow-[var(--shadow-soft)]">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-5">
+          <p className="text-sm text-muted-foreground">
+            Butuh nilai variabel lingkungan untuk membangun ulang bundel di komputer sendiri?
+          </p>
+          <Button asChild variant="outline" className="rounded-full">
+            <Link to="/env-guide">
+              <KeyRound className="h-4 w-4" /> Panduan variabel lingkungan
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+
 
       <div className="mt-8 space-y-4">
         <Section icon={Globe} title="1. Unggah ke hosting">

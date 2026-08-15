@@ -6,7 +6,16 @@
  * Jalankan: npm run export:static
  */
 import { execFileSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -81,17 +90,134 @@ cpSync(join(siteDir, "index.html"), join(siteDir, "404.html"));
 console.log("→ Menulis panduan deploy…");
 cpSync(join(root, "scripts", "deploy-guide.md"), join(siteDir, "README-DEPLOY.md"));
 
+console.log("→ Memvalidasi hasil build…");
+
+/** Kumpulkan semua file hasil build (relatif terhadap siteDir). */
+function walk(dir, prefix = "") {
+  const out = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) out.push(...walk(join(dir, entry.name), rel));
+    else out.push(rel);
+  }
+  return out;
+}
+
+const files = walk(siteDir);
+const jsFiles = files.filter((f) => f.endsWith(".js"));
+const cssFiles = files.filter((f) => f.endsWith(".css"));
+const bundleText = jsFiles.map((f) => readFileSync(join(siteDir, f), "utf8")).join("\n");
+const indexHtml = existsSync(join(siteDir, "index.html"))
+  ? readFileSync(join(siteDir, "index.html"), "utf8")
+  : "";
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL ?? "";
+const publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+
+const checks = [
+  {
+    id: "entry",
+    label: "index.html dan 404.html tersedia",
+    ok: Boolean(indexHtml) && files.includes("404.html"),
+    detail: "Halaman utama serta fallback 404 untuk hosting statis.",
+  },
+  {
+    id: "assets",
+    label: "Bundel JavaScript dan CSS ikut terbangun",
+    ok: jsFiles.length > 0 && cssFiles.length > 0,
+    detail: `${jsFiles.length} berkas JS · ${cssFiles.length} berkas CSS`,
+  },
+  {
+    id: "entry-script",
+    label: "index.html memuat skrip bundel",
+    ok: /<script[^>]+type="module"[^>]+src="/.test(indexHtml),
+    detail: "Tag <script type=\"module\"> menunjuk ke aset hasil build.",
+  },
+  {
+    id: "backend-url",
+    label: "URL backend ter-inject ke bundel",
+    ok: Boolean(supabaseUrl) && bundleText.includes(supabaseUrl),
+    detail: supabaseUrl ? supabaseUrl : "VITE_SUPABASE_URL belum diisi saat build.",
+  },
+  {
+    id: "publishable-key",
+    label: "Kunci publik (publishable key) ter-inject",
+    ok: Boolean(publishableKey) && bundleText.includes(publishableKey),
+    detail: "Diperlukan agar bundel statis bisa terhubung ke database.",
+  },
+  {
+    id: "no-secret",
+    label: "Tidak ada kredensial rahasia di bundel",
+    ok:
+      !/sb_secret_[A-Za-z0-9_-]{8,}/.test(bundleText) &&
+      !/"role"\s*:\s*"service_role"/.test(bundleText) &&
+      (!serviceRoleKey || !bundleText.includes(serviceRoleKey)),
+    detail: "Service role key dan password SMTP hanya ada di backend.",
+  },
+  {
+    id: "no-node",
+    label: "Tidak ada modul Node.js yang bocor",
+    ok: !/require\("node:(tls|net|fs|child_process)"\)|from"node:(tls|net|fs)"/.test(bundleText),
+    detail: "Modul SMTP/server sudah digantikan stub saat build statis.",
+  },
+  {
+    id: "hosting-config",
+    label: "Konfigurasi routing hosting lengkap",
+    ok: [".htaccess", "_redirects", "vercel.json", "nginx.conf.example"].every((f) =>
+      files.includes(f),
+    ),
+    detail: "Apache, Netlify/Cloudflare, Vercel, dan contoh Nginx.",
+  },
+  {
+    id: "guide",
+    label: "Panduan deploy disertakan",
+    ok: files.includes("README-DEPLOY.md"),
+    detail: "README-DEPLOY.md ada di dalam paket.",
+  },
+];
+
+for (const check of checks) {
+  console.log(`${check.ok ? "  ✓" : "  ✗"} ${check.label}`);
+}
+const failed = checks.filter((c) => !c.ok);
+
 console.log("→ Membuat arsip ZIP…");
 mkdirSync(outDir, { recursive: true });
 const zipPath = join(outDir, zipName);
 rmSync(zipPath, { force: true });
-execFileSync("zip", ["-r", "-q", zipPath, "."], { cwd: siteDir, stdio: "inherit" });
+if (!failed.length) {
+  execFileSync("zip", ["-r", "-q", zipPath, "."], { cwd: siteDir, stdio: "inherit" });
+}
 
-const size = statSync(zipPath).size;
+const size = existsSync(zipPath) ? statSync(zipPath).size : 0;
+const zipCheck = {
+  id: "archive",
+  label: "Arsip ZIP terbentuk dan tidak kosong",
+  ok: size > 1024,
+  detail: size ? `${(size / 1024 / 1024).toFixed(2)} MB` : "ZIP tidak dibuat karena validasi gagal.",
+};
+
 writeFileSync(
   join(outDir, "remindly-static.json"),
-  JSON.stringify({ file: zipName, bytes: size, builtAt: new Date().toISOString() }, null, 2) + "\n",
+  JSON.stringify(
+    {
+      file: zipName,
+      bytes: size,
+      builtAt: new Date().toISOString(),
+      fileCount: files.length,
+      valid: !failed.length && zipCheck.ok,
+      checks: [...checks, zipCheck],
+    },
+    null,
+    2,
+  ) + "\n",
 );
 
-if (!existsSync(zipPath)) throw new Error("ZIP gagal dibuat");
+if (failed.length) {
+  console.error(`✗ Validasi gagal (${failed.length}): ${failed.map((c) => c.label).join(", ")}`);
+  process.exit(1);
+}
+if (!zipCheck.ok) throw new Error("ZIP gagal dibuat");
 console.log(`✓ Selesai: public/exports/${zipName} (${(size / 1024 / 1024).toFixed(2)} MB)`);
+
