@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@/lib/app.functions";
-import { CheckCircle2, Loader2, Plus, Server, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Plus, Send, Server, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   fetchSmtpProfiles,
   removeSmtpProfile,
+  sendSmtpTestEmail,
   testSmtpProfile,
   upsertSmtpProfile,
 } from "@/lib/app.functions";
@@ -70,9 +71,12 @@ function SmtpPage() {
   const save = useServerFn(upsertSmtpProfile);
   const destroy = useServerFn(removeSmtpProfile);
   const test = useServerFn(testSmtpProfile);
+  const sendTest = useServerFn(sendSmtpTestEmail);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [busy, setBusy] = useState(false);
   const [testing, setTesting] = useState<string | null>(null);
+  const [sending, setSending] = useState<string | null>(null);
+  const [testEmail, setTestEmail] = useState<Record<string, string>>({});
 
   const profiles = useQuery({ queryKey: ["smtp"], queryFn: () => list() });
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }));
