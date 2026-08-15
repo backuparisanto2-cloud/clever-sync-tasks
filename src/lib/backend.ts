@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
  * is absent the app uses the published Lovable URL (same origin while running
  * inside Lovable).
  */
-const FALLBACK_BACKEND = "https://remindly-smart-scheduler.lovable.app";
+const FALLBACK_BACKEND = "https://project--b89ddb8e-5190-460d-b64a-d3fdb7ee59cc.lovable.app";
 
 export function backendUrl(): string {
   const configured = import.meta.env["VITE_BACKEND_URL"] as string | undefined;
