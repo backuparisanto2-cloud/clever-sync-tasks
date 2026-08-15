@@ -152,8 +152,36 @@ function EnvGuidePage() {
         required: false,
         description: "Daftar domain yang boleh memanggil endpoint email, dipisah koma.",
       },
+      {
+        name: "SMTP_HOST",
+        value: smtpHost.trim(),
+        scope: "server",
+        required: false,
+        description: "Alamat server SMTP, contoh smtp.gmail.com.",
+      },
+      {
+        name: "SMTP_PORT",
+        value: smtpPort,
+        scope: "server",
+        required: false,
+        description: "Port koneksi SMTP sesuai mode yang dipilih di atas.",
+      },
+      {
+        name: "SMTP_SECURE",
+        value: String(smtpSecure),
+        scope: "server",
+        required: false,
+        description: "true untuk TLS langsung (465), false bila memakai STARTTLS atau tanpa TLS.",
+      },
+      {
+        name: "SMTP_FROM",
+        value: smtpFrom.trim(),
+        scope: "server",
+        required: false,
+        description: "Alamat pengirim default. Password SMTP tetap disimpan di server saja.",
+      },
     ],
-    [env, backend, domain],
+    [env, backend, domain, smtpHost, smtpPort, smtpSecure, smtpFrom],
   );
 
   const clientVars = vars.filter((v) => v.scope === "client");
@@ -167,8 +195,11 @@ function EnvGuidePage() {
         "",
         ...clientVars.map((v) => `${v.name}=${v.value || "isi_nilai_di_sini"}`),
         "",
+        "# --- Variabel backend (isi di server, JANGAN di bundel statis) ---",
+        ...serverVars.map((v) => `# ${v.name}=${v.value || "isi_nilai_di_sini"}`),
+        "",
       ].join("\n"),
-    [clientVars],
+    [clientVars, serverVars],
   );
 
   const missing = clientVars.filter((v) => v.required && !v.value);
