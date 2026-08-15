@@ -70,11 +70,28 @@ function CopyButton({ text, label }: { text: string; label: string }) {
   );
 }
 
+const SMTP_MODES = {
+  "465": { port: 465, tls: true, label: "465 — TLS langsung (SMTPS)" },
+  "587": { port: 587, tls: true, label: "587 — STARTTLS" },
+  "25": { port: 25, tls: false, label: "25 — tanpa enkripsi" },
+  custom: { port: 2525, tls: true, label: "Port khusus" },
+} as const;
+
+type SmtpMode = keyof typeof SMTP_MODES;
+
 function EnvGuidePage() {
   const [domain, setDomain] = useState("");
+  const [smtpMode, setSmtpMode] = useState<SmtpMode>("465");
+  const [customPort, setCustomPort] = useState("2525");
+  const [customTls, setCustomTls] = useState(true);
+  const [smtpHost, setSmtpHost] = useState("");
+  const [smtpFrom, setSmtpFrom] = useState("");
 
   const env = import.meta.env as Record<string, string | undefined>;
   const backend = backendUrl();
+
+  const smtpPort = smtpMode === "custom" ? customPort.trim() : String(SMTP_MODES[smtpMode].port);
+  const smtpSecure = smtpMode === "custom" ? customTls : SMTP_MODES[smtpMode].tls;
 
   const vars = useMemo<EnvVar[]>(
     () => [
