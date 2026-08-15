@@ -6,6 +6,15 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { backendUrl } from "@/lib/backend";
 
 export const Route = createFileRoute("/env-guide")({
@@ -61,11 +70,28 @@ function CopyButton({ text, label }: { text: string; label: string }) {
   );
 }
 
+const SMTP_MODES = {
+  "465": { port: 465, tls: true, label: "465 — TLS langsung (SMTPS)" },
+  "587": { port: 587, tls: true, label: "587 — STARTTLS" },
+  "25": { port: 25, tls: false, label: "25 — tanpa enkripsi" },
+  custom: { port: 2525, tls: true, label: "Port khusus" },
+} as const;
+
+type SmtpMode = keyof typeof SMTP_MODES;
+
 function EnvGuidePage() {
   const [domain, setDomain] = useState("");
+  const [smtpMode, setSmtpMode] = useState<SmtpMode>("465");
+  const [customPort, setCustomPort] = useState("2525");
+  const [customTls, setCustomTls] = useState(true);
+  const [smtpHost, setSmtpHost] = useState("");
+  const [smtpFrom, setSmtpFrom] = useState("");
 
   const env = import.meta.env as Record<string, string | undefined>;
   const backend = backendUrl();
+
+  const smtpPort = smtpMode === "custom" ? customPort.trim() : String(SMTP_MODES[smtpMode].port);
+  const smtpSecure = smtpMode === "custom" ? customTls : SMTP_MODES[smtpMode].tls;
 
   const vars = useMemo<EnvVar[]>(
     () => [
@@ -126,8 +152,36 @@ function EnvGuidePage() {
         required: false,
         description: "Daftar domain yang boleh memanggil endpoint email, dipisah koma.",
       },
+      {
+        name: "SMTP_HOST",
+        value: smtpHost.trim(),
+        scope: "server",
+        required: false,
+        description: "Alamat server SMTP, contoh smtp.gmail.com.",
+      },
+      {
+        name: "SMTP_PORT",
+        value: smtpPort,
+        scope: "server",
+        required: false,
+        description: "Port koneksi SMTP sesuai mode yang dipilih di atas.",
+      },
+      {
+        name: "SMTP_SECURE",
+        value: String(smtpSecure),
+        scope: "server",
+        required: false,
+        description: "true untuk TLS langsung (465), false bila memakai STARTTLS atau tanpa TLS.",
+      },
+      {
+        name: "SMTP_FROM",
+        value: smtpFrom.trim(),
+        scope: "server",
+        required: false,
+        description: "Alamat pengirim default. Password SMTP tetap disimpan di server saja.",
+      },
     ],
-    [env, backend, domain],
+    [env, backend, domain, smtpHost, smtpPort, smtpSecure, smtpFrom],
   );
 
   const clientVars = vars.filter((v) => v.scope === "client");
@@ -141,8 +195,11 @@ function EnvGuidePage() {
         "",
         ...clientVars.map((v) => `${v.name}=${v.value || "isi_nilai_di_sini"}`),
         "",
+        "# --- Variabel backend (isi di server, JANGAN di bundel statis) ---",
+        ...serverVars.map((v) => `# ${v.name}=${v.value || "isi_nilai_di_sini"}`),
+        "",
       ].join("\n"),
-    [clientVars],
+    [clientVars, serverVars],
   );
 
   const missing = clientVars.filter((v) => v.required && !v.value);
@@ -170,6 +227,72 @@ function EnvGuidePage() {
           />
           <p className="text-xs text-muted-foreground">
             Isi domain baru Anda supaya nilai <code>ALLOWED_ORIGINS</code> ikut tersusun otomatis.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-4 border-border/70 shadow-[var(--shadow-soft)]">
+        <CardContent className="space-y-4 p-5">
+          <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+            <Server className="h-4 w-4 text-primary" /> Koneksi SMTP
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="smtp-mode">Port &amp; enkripsi</Label>
+              <Select value={smtpMode} onValueChange={(v) => setSmtpMode(v as SmtpMode)}>
+                <SelectTrigger id="smtp-mode">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(SMTP_MODES) as SmtpMode[]).map((key) => (
+                    <SelectItem key={key} value={key}>
+                      {SMTP_MODES[key].label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="smtp-host">Host SMTP (opsional)</Label>
+              <Input
+                id="smtp-host"
+                placeholder="smtp.gmail.com"
+                value={smtpHost}
+                onChange={(e) => setSmtpHost(e.target.value)}
+              />
+            </div>
+            {smtpMode === "custom" && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="smtp-port">Port khusus</Label>
+                  <Input
+                    id="smtp-port"
+                    type="number"
+                    value={customPort}
+                    onChange={(e) => setCustomPort(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-border/70 p-3">
+                  <Label htmlFor="smtp-tls" className="text-sm">
+                    Pakai TLS langsung
+                  </Label>
+                  <Switch id="smtp-tls" checked={customTls} onCheckedChange={setCustomTls} />
+                </div>
+              </>
+            )}
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="smtp-from">Alamat pengirim (opsional)</Label>
+              <Input
+                id="smtp-from"
+                placeholder="pengingat@domainanda.com"
+                value={smtpFrom}
+                onChange={(e) => setSmtpFrom(e.target.value)}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Port 465 memakai TLS langsung, port 587 memakai STARTTLS, port 25 tanpa enkripsi. Nilai
+            ini harus sama dengan profil di halaman SMTP agar pengiriman berhasil.
           </p>
         </CardContent>
       </Card>
