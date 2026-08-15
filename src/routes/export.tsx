@@ -1,6 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Download, FileArchive, Globe, ServerCog, ShieldCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Download,
+  FileArchive,
+  Globe,
+  KeyRound,
+  Loader2,
+  ServerCog,
+  ShieldCheck,
+  XCircle,
+} from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,9 +36,18 @@ export const Route = createFileRoute("/export")({
   component: ExportPage,
 });
 
-type ExportMeta = { file: string; bytes: number; builtAt: string };
+type ExportCheck = { id: string; label: string; ok: boolean; detail: string };
+type ExportMeta = {
+  file: string;
+  bytes: number;
+  builtAt: string;
+  fileCount?: number;
+  valid?: boolean;
+  checks?: ExportCheck[];
+};
 
 const ZIP_URL = "/exports/remindly-static.zip";
+
 
 function Section({
   icon: Icon,

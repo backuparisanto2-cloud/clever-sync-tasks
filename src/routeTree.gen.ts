@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as EnvGuideRouteImport } from './routes/env-guide'
 import { Route as ExportRouteImport } from './routes/export'
 import { Route as LogsRouteImport } from './routes/logs'
 import { Route as SmtpRouteImport } from './routes/smtp'
@@ -29,6 +30,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnvGuideRoute = EnvGuideRouteImport.update({
+  id: '/env-guide',
+  path: '/env-guide',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExportRoute = ExportRouteImport.update({
@@ -80,6 +86,7 @@ const ApiPublicMailTestSendRoute = ApiPublicMailTestSendRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/env-guide': typeof EnvGuideRoute
   '/export': typeof ExportRoute
   '/logs': typeof LogsRoute
   '/smtp': typeof SmtpRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/env-guide': typeof EnvGuideRoute
   '/export': typeof ExportRoute
   '/logs': typeof LogsRoute
   '/smtp': typeof SmtpRoute
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/env-guide': typeof EnvGuideRoute
   '/export': typeof ExportRoute
   '/logs': typeof LogsRoute
   '/smtp': typeof SmtpRoute
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/env-guide'
     | '/export'
     | '/logs'
     | '/smtp'
@@ -135,6 +145,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/env-guide'
     | '/export'
     | '/logs'
     | '/smtp'
@@ -148,6 +159,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/auth'
+    | '/env-guide'
     | '/export'
     | '/logs'
     | '/smtp'
@@ -162,6 +174,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  EnvGuideRoute: typeof EnvGuideRoute
   ExportRoute: typeof ExportRoute
   LogsRoute: typeof LogsRoute
   SmtpRoute: typeof SmtpRoute
@@ -187,6 +200,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/env-guide': {
+      id: '/env-guide'
+      path: '/env-guide'
+      fullPath: '/env-guide'
+      preLoaderRoute: typeof EnvGuideRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/export': {
@@ -258,6 +278,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  EnvGuideRoute: EnvGuideRoute,
   ExportRoute: ExportRoute,
   LogsRoute: LogsRoute,
   SmtpRoute: SmtpRoute,
