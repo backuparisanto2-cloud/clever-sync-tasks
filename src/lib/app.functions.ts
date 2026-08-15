@@ -264,3 +264,10 @@ export async function sendReminderNow({ data }: { data: { id: string } }) {
 export async function testSmtpProfile({ data }: { data: { id: string } }) {
   return callBackend<{ status: string }>("/api/public/mail/test", { id: data.id });
 }
+
+export async function sendSmtpTestEmail({ data }: { data: { id: string; to: string } }) {
+  return callBackend<{ status: string; error: string | null }>("/api/public/mail/test-send", {
+    id: data.id,
+    to: data.to,
+  });
+}
