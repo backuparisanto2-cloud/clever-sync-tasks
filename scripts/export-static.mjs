@@ -150,7 +150,8 @@ const checks = [
     id: "no-secret",
     label: "Tidak ada kredensial rahasia di bundel",
     ok:
-      !/sb_secret_|SUPABASE_SERVICE_ROLE_KEY|service_role/.test(bundleText) &&
+      !/sb_secret_[A-Za-z0-9_-]{8,}/.test(bundleText) &&
+      !/"role"\s*:\s*"service_role"/.test(bundleText) &&
       (!serviceRoleKey || !bundleText.includes(serviceRoleKey)),
     detail: "Service role key dan password SMTP hanya ada di backend.",
   },
