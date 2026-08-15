@@ -292,6 +292,46 @@ function SmtpPage() {
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
+
+                <div className="col-span-2 flex flex-wrap items-center gap-2 border-t border-border/60 pt-4">
+                  <Input
+                    type="email"
+                    className="h-9 w-full sm:w-64"
+                    placeholder="email tujuan uji"
+                    value={testEmail[p.id] ?? ""}
+                    onChange={(e) => setTestEmail((m) => ({ ...m, [p.id]: e.target.value }))}
+                  />
+                  <Button
+                    size="sm"
+                    className="rounded-full"
+                    disabled={sending === p.id}
+                    onClick={async () => {
+                      const to = (testEmail[p.id] ?? "").trim();
+                      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+                        toast.error("Masukkan alamat email tujuan yang valid");
+                        return;
+                      }
+                      setSending(p.id);
+                      try {
+                        const res = await sendTest({ data: { id: p.id, to } });
+                        if (res.error) toast.error(`Gagal kirim: ${res.error}`);
+                        else toast.success(`Email uji terkirim ke ${to}`);
+                      } catch (e) {
+                        toast.error((e as Error).message);
+                      } finally {
+                        setSending(null);
+                        qc.invalidateQueries({ queryKey: ["smtp"] });
+                      }
+                    }}
+                  >
+                    {sending === p.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                    Kirim email uji
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
