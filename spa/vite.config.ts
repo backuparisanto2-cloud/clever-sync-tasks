@@ -5,12 +5,30 @@ import tailwindcss from "@tailwindcss/vite";
 
 const projectRoot = fileURLToPath(new URL("..", import.meta.url));
 
-/** Plain SPA build used by `bun run export:static` — no SSR, no worker. */
+/**
+ * Ganti modul server-only (SMTP, mailer, helper API) dengan stub kosong supaya
+ * kode backend tidak ikut terbundel ke dalam paket statis.
+ */
+const stubServerModules = {
+  name: "stub-server-modules",
+  enforce: "pre" as const,
+  resolveId(source: string) {
+    if (/\.server(\.tsx?)?$/.test(source)) return "\0server-stub";
+    return null;
+  },
+  load(id: string) {
+    if (id === "\0server-stub") return "export default {};\nexport const __serverOnly = true;\n";
+    return null;
+  },
+};
+
+/** Plain SPA build used by `npm run export:static` — no SSR, no worker. */
 export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
   publicDir: false,
   envDir: projectRoot,
-  plugins: [tailwindcss(), react()],
+  plugins: [stubServerModules, tailwindcss(), react()],
+
   resolve: {
     alias: { "@": fileURLToPath(new URL("../src", import.meta.url)) },
     dedupe: ["react", "react-dom", "@tanstack/react-router", "@tanstack/react-query"],
